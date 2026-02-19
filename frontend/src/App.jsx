@@ -449,17 +449,17 @@ function App() {
         </div>
 
         {/* Custom Initialization Toggle */}
-        <div className="flex items-center gap-3 mt-6 px-1">
-          <label className="relative inline-flex items-center cursor-pointer group">
+        <div className="custom-toggle-container">
+          <label className="toggle-label">
             <input
               type="checkbox"
               checked={showInit}
               onChange={e => setShowInit(e.target.checked)}
-              className="sr-only peer"
+              className="toggle-input"
             />
-            <div className="w-11 h-6 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 peer-checked:after:bg-white group-hover:after:scale-95"></div>
-            <span className="ml-3 text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
-              Custom Initialization <span className="text-xs text-gray-500 ml-1 font-normal">(Advanced)</span>
+            <div className="toggle-slider"></div>
+            <span className="toggle-text">
+              Custom Initialization <span className="toggle-subtext">(Advanced)</span>
             </span>
           </label>
         </div>
