@@ -221,11 +221,22 @@ public:
         cout << "]" << endl;
         cout << "}" << endl;
     }
+    // Method to set parameters manually
+    void setParameters(const vector<vector<double>>& newA, const vector<vector<double>>& newB, const vector<double>& newPi) {
+        A = newA;
+        B = newB;
+        Pi = newPi;
+    }
 };
 
 int main() {
     int N, M, K;
     if (!(cin >> N >> M >> K)) return 0;
+
+    // Check for optional initialization mode
+    // 0 = random (default), 1 = custom
+    int initMode = 0;
+    cin >> initMode;
     
     vector<vector<int>> obs(K);
     for (int k = 0; k < K; k++) {
@@ -235,8 +246,26 @@ int main() {
         for (int t = 0; t < T; t++) cin >> obs[k][t];
     }
 
-    clock_t start = clock();
     HMM hmm(N, M);
+
+    // If custom initialization mode is enabled, read matrices
+    if (initMode == 1) {
+        vector<vector<double>> customA(N, vector<double>(N));
+        vector<vector<double>> customB(N, vector<double>(M));
+        vector<double> customPi(N);
+
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < N; j++) cin >> customA[i][j];
+
+        for (int i = 0; i < N; i++)
+            for (int j = 0; j < M; j++) cin >> customB[i][j];
+
+        for (int i = 0; i < N; i++) cin >> customPi[i];
+
+        hmm.setParameters(customA, customB, customPi);
+    }
+
+    clock_t start = clock();
     hmm.train(obs, 50); // Reduced iterations for speed in demo, or keep 100
     clock_t end = clock();
     double execTime = double(end - start) / CLOCKS_PER_SEC;

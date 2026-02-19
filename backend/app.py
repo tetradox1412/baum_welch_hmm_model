@@ -23,10 +23,25 @@ def train():
     # T1
     # o1 o2 ...
     # ...
-    input_str = f"{N} {M} {len(observations)}\n"
+    init_params = data.get('initParams')
+    init_mode = 1 if init_params else 0
+
+    # Format: N M K initMode
+    input_str = f"{N} {M} {len(observations)}\n{init_mode}\n"
+    
     for obs in observations:
         input_str += f"{len(obs)}\n"
         input_str += " ".join(map(str, obs)) + "\n"
+
+    if init_mode == 1:
+        # A matrix (N x N)
+        for row in init_params['A']:
+             input_str += " ".join(map(str, row)) + "\n"
+        # B matrix (N x M)
+        for row in init_params['B']:
+             input_str += " ".join(map(str, row)) + "\n"
+        # Pi vector (N)
+        input_str += " ".join(map(str, init_params['Pi'])) + "\n"
 
     # Run HMM.exe
     # Assuming HMM.exe is in the parent directory relative to this script

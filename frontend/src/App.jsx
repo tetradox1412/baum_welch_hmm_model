@@ -6,6 +6,7 @@ import { BlockMath, InlineMath } from 'react-katex'
 import './App.css'
 import OptimizationChart from './OptimizationChart';
 import MathExplanation from './MathExplanation';
+import InitPlayground from './InitPlayground';
 
 function App() {
   const [N, setN] = useState(2)
@@ -18,6 +19,9 @@ function App() {
   const [hoveredEdge, setHoveredEdge] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
   const [graphZoom, setGraphZoom] = useState(1)
+
+  const [showInit, setShowInit] = useState(false);
+  const [initParams, setInitParams] = useState(null);
 
   // Drag-to-pan for the graph scroll container
   const graphScrollRef = useRef(null)
@@ -116,7 +120,12 @@ function App() {
         line.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n))
       ).filter(arr => arr.length > 0)
 
-      const payload = { N: parseInt(N), M: parseInt(M), observations: parsedObs }
+      const payload = {
+        N: parseInt(N),
+        M: parseInt(M),
+        observations: parsedObs,
+        initParams: showInit ? initParams : null
+      }
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
       const response = await axios.post(`${apiUrl}/train`, payload)
       setResult(response.data)
@@ -438,6 +447,34 @@ function App() {
             placeholder={"0, 1, 0\n1, 1, 0, 1"}
           />
         </div>
+
+        {/* Custom Initialization Toggle */}
+        <div className="flex items-center gap-3 mt-6 px-1">
+          <label className="relative inline-flex items-center cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={showInit}
+              onChange={e => setShowInit(e.target.checked)}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 peer-checked:after:bg-white group-hover:after:scale-95"></div>
+            <span className="ml-3 text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+              Custom Initialization <span className="text-xs text-gray-500 ml-1 font-normal">(Advanced)</span>
+            </span>
+          </label>
+        </div>
+
+        {/* Init Playground Component */}
+        <AnimatePresence>
+          {showInit && (
+            <InitPlayground
+              N={parseInt(N)}
+              M={parseInt(M)}
+              initParams={initParams}
+              setInitParams={setInitParams}
+            />
+          )}
+        </AnimatePresence>
 
         <div className="action-bar">
           <div className="tooltip-section">
