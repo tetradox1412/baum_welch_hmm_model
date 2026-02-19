@@ -1,12 +1,12 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react'
 import axios from 'axios'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaPlay, FaSync, FaProjectDiagram, FaCode, FaLightbulb, FaInfoCircle } from 'react-icons/fa'
 import { BlockMath, InlineMath } from 'react-katex'
 import './App.css'
-import OptimizationChart from './OptimizationChart';
-import MathExplanation from './MathExplanation';
-import InitPlayground from './InitPlayground';
+const OptimizationChart = lazy(() => import('./OptimizationChart'));
+const MathExplanation = lazy(() => import('./MathExplanation'));
+const InitPlayground = lazy(() => import('./InitPlayground'));
 
 function App() {
   const [N, setN] = useState(2)
@@ -467,12 +467,14 @@ function App() {
         {/* Init Playground Component */}
         <AnimatePresence>
           {showInit && (
-            <InitPlayground
-              N={parseInt(N)}
-              M={parseInt(M)}
-              initParams={initParams}
-              setInitParams={setInitParams}
-            />
+            <Suspense fallback={<div className="p-4 text-center text-gray-400 text-sm">Loading playground...</div>}>
+              <InitPlayground
+                N={parseInt(N)}
+                M={parseInt(M)}
+                initParams={initParams}
+                setInitParams={setInitParams}
+              />
+            </Suspense>
           )}
         </AnimatePresence>
 
@@ -502,7 +504,9 @@ function App() {
       {/* ===== Optimization Chart ===== */}
       {
         result && (
-          <OptimizationChart history={result.history} executionTime={result.executionTime} isDark={true} />
+          <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-500 text-sm">Loading chart...</div>}>
+            <OptimizationChart history={result.history} executionTime={result.executionTime} isDark={true} />
+          </Suspense>
         )
       }
 
@@ -668,7 +672,9 @@ function App() {
             </div>
 
             {/* In-depth Math Explanation */}
-            <MathExplanation N={parseInt(N)} M={parseInt(M)} observations={observations} result={result} />
+            <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-500">Loading explanation...</div>}>
+              <MathExplanation N={parseInt(N)} M={parseInt(M)} observations={observations} result={result} />
+            </Suspense>
 
           </motion.div>
         )}
