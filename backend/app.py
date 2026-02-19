@@ -31,9 +31,14 @@ def train():
     # Run HMM.exe
     # Assuming HMM.exe is in the parent directory relative to this script
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    hmm_path = os.path.join(base_dir, '..', 'HMM.exe')
+    hmm_exe = os.path.join(base_dir, '..', 'HMM.exe')
+    hmm_bin = os.path.join(base_dir, '..', 'HMM')
     
-    if not os.path.exists(hmm_path):
+    if os.path.exists(hmm_exe):
+        hmm_path = hmm_exe
+    elif os.path.exists(hmm_bin):
+        hmm_path = hmm_bin
+    else:
          return jsonify({"error": "HMM executable not found"}), 500
 
     try:
