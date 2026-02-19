@@ -7,6 +7,7 @@ import './App.css'
 const OptimizationChart = lazy(() => import('./OptimizationChart'));
 const MathExplanation = lazy(() => import('./MathExplanation'));
 const InitPlayground = lazy(() => import('./InitPlayground'));
+import LandingPage from './LandingPage';
 
 function App() {
   const [N, setN] = useState(2)
@@ -15,6 +16,7 @@ function App() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [showLanding, setShowLanding] = useState(true);
 
   const [hoveredEdge, setHoveredEdge] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
@@ -135,6 +137,11 @@ function App() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show landing page
+  if (showLanding) {
+    return <LandingPage onStart={() => setShowLanding(false)} />;
   }
 
   /* ===== Static SVG Graph Rendering ===== */
@@ -488,6 +495,7 @@ function App() {
             whileTap={{ scale: 0.96 }}
             onClick={handleTrain}
             disabled={loading}
+            style={{ display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}
           >
             {loading ? <FaSync className="spin" /> : <FaPlay style={{ marginRight: '6px' }} />}
             {loading ? ' Training…' : ' Train Model'}
