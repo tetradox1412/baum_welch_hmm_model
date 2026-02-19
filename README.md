@@ -1,5 +1,9 @@
 # Hidden Markov Model Visualizer
 
+Submitted by:
+Mridul Joy 
+TCR24CS048
+
 An interactive web application to visualize, train, and understand Hidden Markov Models (HMM) using the Baum-Welch algorithm.
 
 ![Project Preview](docs/images/ui_preview.png)
