@@ -406,6 +406,7 @@ function App() {
       >
         Hidden Markov Model
       </motion.h1>
+      <p className="author-credit"><span>— By <strong>Mridul Joy</strong></span></p>
 
       {/* ===== Input Card ===== */}
       <div className="glass-card">
@@ -635,6 +636,8 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+
     </motion.div >
   )
 }
