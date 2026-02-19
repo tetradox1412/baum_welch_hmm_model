@@ -403,9 +403,8 @@ function App() {
       <motion.h1
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.7 }}
       >
-        Mridul's HMM Visualizer
+        Hidden Markov Model
       </motion.h1>
 
       {/* ===== Input Card ===== */}
@@ -463,9 +462,11 @@ function App() {
       </div>
 
       {/* ===== Optimization Chart ===== */}
-      {result && (
-        <OptimizationChart history={result.history} executionTime={result.executionTime} isDark={true} />
-      )}
+      {
+        result && (
+          <OptimizationChart history={result.history} executionTime={result.executionTime} isDark={true} />
+        )
+      }
 
       {/* ===== Results ===== */}
       <AnimatePresence>
@@ -634,7 +635,7 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </motion.div >
   )
 }
 
