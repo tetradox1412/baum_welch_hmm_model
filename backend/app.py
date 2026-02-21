@@ -25,9 +25,10 @@ def train():
     # ...
     init_params = data.get('initParams')
     init_mode = 1 if init_params else 0
+    max_iter = data.get('maxIter', 50)
 
-    # Format: N M K initMode
-    input_str = f"{N} {M} {len(observations)}\n{init_mode}\n"
+    # Format: N M K initMode maxIter
+    input_str = f"{N} {M} {len(observations)}\n{init_mode}\n{max_iter}\n"
     
     for obs in observations:
         input_str += f"{len(obs)}\n"

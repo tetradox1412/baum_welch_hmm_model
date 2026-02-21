@@ -29,6 +29,7 @@ const OptimizationChart = ({ history, executionTime, isDark }) => {
     // Calculate trend
     const allData = history.map((h, idx) => ({
         ...h,
+        iter: idx + 1,
         trend: idx > 0 ? h.logLikelihood - history[idx - 1].logLikelihood : 0
     }))
 
@@ -53,8 +54,8 @@ const OptimizationChart = ({ history, executionTime, isDark }) => {
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             const value = payload[0].value
-            const prevValue = label > 0 ? history[label - 1]?.logLikelihood : value
-            const change = label > 0 ? ((value - prevValue) / Math.abs(prevValue) * 100).toFixed(3) : 0
+            const prevValue = label > 1 ? history[label - 2]?.logLikelihood : value
+            const change = label > 1 ? ((value - prevValue) / Math.abs(prevValue) * 100).toFixed(3) : 0
 
             return (
                 <div style={{
@@ -84,7 +85,7 @@ const OptimizationChart = ({ history, executionTime, isDark }) => {
                             {Number(value).toFixed(4)}
                         </span>
                     </div>
-                    {label > 0 && (
+                    {label > 1 && (
                         <div style={{ fontSize: '0.85em' }}>
                             <span style={{ color: 'var(--text-muted)' }}>Δ Change: </span>
                             <span style={{

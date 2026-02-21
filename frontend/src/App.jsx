@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react'
 import axios from 'axios'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FaPlay, FaSync, FaProjectDiagram, FaCode, FaLightbulb, FaInfoCircle } from 'react-icons/fa'
+import { FaPlay, FaPause, FaSync, FaProjectDiagram, FaCode, FaLightbulb, FaInfoCircle, FaStepBackward, FaStepForward, FaFastBackward, FaFastForward } from 'react-icons/fa'
 import { BlockMath, InlineMath } from 'react-katex'
 import './App.css'
 const OptimizationChart = lazy(() => import('./OptimizationChart'));
@@ -12,6 +12,7 @@ import LandingPage from './LandingPage';
 function App() {
   const [N, setN] = useState(2)
   const [M, setM] = useState(2)
+  const [maxIter, setMaxIter] = useState(50)
   const [observations, setObservations] = useState(["0,1,0"])
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -24,6 +25,16 @@ function App() {
 
   const [showInit, setShowInit] = useState(false);
   const [initParams, setInitParams] = useState(null);
+  const [showParticles, setShowParticles] = useState(true);
+
+  // Playback state
+  const [currentIter, setCurrentIter] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+
+  // Lazy-load particles: only render when graph is visible in viewport
+  const [graphVisible, setGraphVisible] = useState(false);
+  const graphContainerRef = useRef(null);
 
   // Drag-to-pan for the graph scroll container
   const graphScrollRef = useRef(null)
@@ -71,9 +82,38 @@ function App() {
     return () => el.removeEventListener('wheel', onWheel);
   }, [onWheel, result]);
 
-  // Reset zoom when new results arrive
+  // Reset zoom and playback when new results arrive
   useEffect(() => {
     setGraphZoom(1);
+    if (result && result.history) {
+      setCurrentIter(result.history.length - 1); // Default to final iteration
+      setIsPlaying(false);
+    }
+  }, [result]);
+
+  // Handle Playback Interval
+  useEffect(() => {
+    let intervalId;
+    if (isPlaying && result && currentIter < result.history.length - 1) {
+      intervalId = setInterval(() => {
+        setCurrentIter(prev => prev + 1);
+      }, 600 / playbackSpeed);
+    } else if (isPlaying && result && currentIter >= result.history.length - 1) {
+      setIsPlaying(false);
+    }
+    return () => clearInterval(intervalId);
+  }, [isPlaying, result, currentIter, playbackSpeed]);
+
+  // IntersectionObserver for lazy-loading particles
+  useEffect(() => {
+    const el = graphContainerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setGraphVisible(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [result]);
 
   // Auto-scroll to bring hovered edge into view
@@ -125,6 +165,7 @@ function App() {
       const payload = {
         N: parseInt(N),
         M: parseInt(M),
+        maxIter: parseInt(maxIter) || 50,
         observations: parsedObs,
         initParams: showInit ? initParams : null
       }
@@ -148,10 +189,16 @@ function App() {
   const renderGraph = () => {
     if (!result) return null;
 
-    const n = result.A.length;
+    // Get parameters for the CURRENT iteration
+    const stateA = result.history[currentIter]?.A || result.A;
+    const statePi = result.history[currentIter]?.Pi || result.Pi;
+
+    const n = stateA.length;
     const nodeRadius = 28;
     const padding = 120;
-    const ringRadius = Math.max(120, n * 45);
+    // Cap ring radius to ensure the SVG doesn't become impossibly large for N=50
+    // 35 * n provides enough circumference but we clamp at 1800 to avoid browser issues
+    const ringRadius = Math.min(1800, Math.max(120, n * 35));
     const svgSize = (ringRadius + padding) * 2;
     const center = svgSize / 2;
 
@@ -167,14 +214,14 @@ function App() {
 
     // Collect edges
     const edges = [];
-    result.A.forEach((row, i) => {
+    stateA.forEach((row, i) => {
       row.forEach((prob, j) => {
         if (prob > 0.005) edges.push({ from: i, to: j, prob });
       });
     });
 
     // Check if reverse edge exists (for curving in opposite directions)
-    const hasReverse = (i, j) => result.A[j][i] > 0.005;
+    const hasReverse = (i, j) => stateA[j][i] > 0.005;
 
     // Compute curved path between two different nodes
     const makeEdgePath = (from, to, curveOffset) => {
@@ -252,6 +299,14 @@ function App() {
               <feGaussianBlur stdDeviation="4" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
+            <filter id="particleGlow">
+              <feGaussianBlur stdDeviation="2.5" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <radialGradient id="particleGradient">
+              <stop offset="0%" stopColor="#c4b5fd" />
+              <stop offset="100%" stopColor="#818cf8" />
+            </radialGradient>
           </defs>
 
           {/* Edges – non-hovered first, hovered last for z-ordering */}
@@ -285,6 +340,28 @@ function App() {
                   markerEnd={isSelf ? undefined : 'url(#arrow)'}
                   style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }}
                 />
+
+                {/* Flowing Particles — lazy loaded */}
+                {graphVisible && showParticles && edge.prob > 0.05 && Array.from({ length: Math.ceil(edge.prob * 4) }).map((_, pIdx) => {
+                  const numParticles = Math.ceil(edge.prob * 4);
+                  const dur = 2.5 - Math.min(1.5, edge.prob * 1.5);
+                  return (
+                    <circle
+                      key={`p-${key}-${pIdx}`}
+                      r={2}
+                      fill="url(#particleGradient)"
+                      filter="url(#particleGlow)"
+                      opacity={0.85}
+                    >
+                      <animateMotion
+                        dur={`${dur}s`}
+                        repeatCount="indefinite"
+                        path={pathInfo.path}
+                        begin={`${(pIdx * dur) / numParticles}s`}
+                      />
+                    </circle>
+                  )
+                })}
                 <rect
                   x={pathInfo.labelX - 52} y={pathInfo.labelY - 11}
                   width={104} height={22} rx={6}
@@ -336,6 +413,28 @@ function App() {
                   markerEnd={isSelf ? undefined : 'url(#arrow-hl)'}
                   style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }}
                 />
+
+                {/* Hovered Flowing Particles — lazy loaded */}
+                {graphVisible && showParticles && edge.prob > 0.01 && Array.from({ length: Math.ceil(edge.prob * 6) }).map((_, pIdx) => {
+                  const numParticles = Math.ceil(edge.prob * 6);
+                  const dur = 2.0 - Math.min(1.0, edge.prob);
+                  return (
+                    <circle
+                      key={`hp-${key}-${pIdx}`}
+                      r={3.0}
+                      fill="#f472b6"
+                      filter="url(#particleGlow)"
+                      opacity={1}
+                    >
+                      <animateMotion
+                        dur={`${dur}s`}
+                        repeatCount="indefinite"
+                        path={pathInfo.path}
+                        begin={`${(pIdx * dur) / numParticles}s`}
+                      />
+                    </circle>
+                  )
+                })}
                 <rect
                   x={pathInfo.labelX - 52} y={pathInfo.labelY - 11}
                   width={104} height={22} rx={6}
@@ -390,7 +489,7 @@ function App() {
                   fontFamily="'JetBrains Mono', monospace"
                   style={{ pointerEvents: 'none' }}
                 >
-                  π={result.Pi[i].toFixed(3)}
+                  π={statePi[i].toFixed(3)}
                 </text>
               </g>
             );
@@ -443,6 +542,14 @@ function App() {
               <span className="number-stepper number-stepper--inc" onClick={() => setM(prev => Math.min(10, Number(prev) + 1))}>+</span>
             </div>
           </div>
+          <div className="input-group">
+            <label><FaSync /> Max Iterations</label>
+            <div className="number-input-wrap">
+              <span className="number-stepper number-stepper--dec" onClick={() => setMaxIter(prev => Math.max(5, Number(prev) - 5))}>−</span>
+              <input type="number" value={maxIter} onChange={e => setMaxIter(e.target.value)} min="5" max="500" />
+              <span className="number-stepper number-stepper--inc" onClick={() => setMaxIter(prev => Math.min(500, Number(prev) + 5))}>+</span>
+            </div>
+          </div>
         </div>
 
         <div className="input-group">
@@ -467,6 +574,22 @@ function App() {
             <div className="toggle-slider"></div>
             <span className="toggle-text">
               Custom Initialization <span className="toggle-subtext">(Advanced)</span>
+            </span>
+          </label>
+        </div>
+
+        {/* Animation Toggle */}
+        <div className="custom-toggle-container" style={{ marginTop: '0.75rem' }}>
+          <label className="toggle-label">
+            <input
+              type="checkbox"
+              checked={showParticles}
+              onChange={e => setShowParticles(e.target.checked)}
+              className="toggle-input"
+            />
+            <div className="toggle-slider" style={{ backgroundColor: showParticles ? '#818cf8' : '' }}></div>
+            <span className="toggle-text">
+              Animate Probability Flow <span className="toggle-subtext">(Visual)</span>
             </span>
           </label>
         </div>
@@ -533,8 +656,89 @@ function App() {
               Training Results
             </h2>
 
+            {/* Playback Controls */}
+            {result.history && result.history.length > 0 && (
+              <div className="playback-panel">
+                {/* Top: Iteration Badge */}
+                <div className="playback-iter-badge">
+                  <span className="playback-iter-text">Iteration</span>
+                  <span className="playback-iter-num">{currentIter + 1}</span>
+                  <span className="playback-iter-sep">/</span>
+                  <span className="playback-iter-total">{result.history.length}</span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="playback-track-wrapper">
+                  <div className="playback-track">
+                    <div
+                      className="playback-track-fill"
+                      style={{ width: `${(currentIter / Math.max(1, result.history.length - 1)) * 100}%` }}
+                    />
+                    <div
+                      className="playback-track-thumb"
+                      style={{ left: `${(currentIter / Math.max(1, result.history.length - 1)) * 100}%` }}
+                    />
+                  </div>
+                  <input
+                    type="range"
+                    className="playback-track-input"
+                    min="0"
+                    max={result.history.length - 1}
+                    value={currentIter}
+                    onChange={(e) => {
+                      setIsPlaying(false);
+                      setCurrentIter(parseInt(e.target.value));
+                    }}
+                  />
+                </div>
+
+                {/* Transport Controls */}
+                <div className="playback-transport">
+                  <button className="transport-btn" onClick={() => { setIsPlaying(false); setCurrentIter(0); }} title="First">
+                    <FaFastBackward />
+                  </button>
+                  <button className="transport-btn" onClick={() => { setIsPlaying(false); setCurrentIter(prev => Math.max(0, prev - 1)); }} title="Step Back">
+                    <FaStepBackward />
+                  </button>
+                  <button
+                    className="transport-btn transport-btn--play"
+                    onClick={() => {
+                      if (currentIter >= result.history.length - 1) setCurrentIter(0);
+                      setIsPlaying(!isPlaying);
+                    }}
+                  >
+                    {isPlaying ? <FaPause /> : <FaPlay style={{ marginLeft: '2px' }} />}
+                  </button>
+                  <button className="transport-btn" onClick={() => { setIsPlaying(false); setCurrentIter(prev => Math.min(result.history.length - 1, prev + 1)); }} title="Step Forward">
+                    <FaStepForward />
+                  </button>
+                  <button className="transport-btn" onClick={() => { setIsPlaying(false); setCurrentIter(result.history.length - 1); }} title="Last">
+                    <FaFastForward />
+                  </button>
+
+                  {/* Speed Selector */}
+                  <div className="playback-speed">
+                    {[0.5, 1, 2, 3].map(s => (
+                      <button
+                        key={s}
+                        className={`speed-chip ${playbackSpeed === s ? 'speed-chip--active' : ''}`}
+                        onClick={() => setPlaybackSpeed(s)}
+                      >
+                        {s}×
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Log Likelihood */}
+                <div className="playback-logL">
+                  ℓ = {result.history[currentIter].logLikelihood.toFixed(4)}
+                </div>
+              </div>
+            )}
+
             {/* Graph */}
-            <div className="graph-container">
+            <div className="graph-container" ref={graphContainerRef}>
               {renderGraph()}
             </div>
 
@@ -558,11 +762,11 @@ function App() {
                   <thead>
                     <tr>
                       <th>From / To</th>
-                      {result.A.map((_, i) => <th key={i}>S{i}</th>)}
+                      {(result.history[currentIter]?.A || result.A).map((_, i) => <th key={i}>S{i}</th>)}
                     </tr>
                   </thead>
                   <tbody>
-                    {result.A.map((row, i) => (
+                    {(result.history[currentIter]?.A || result.A).map((row, i) => (
                       <tr key={i}>
                         <td><strong>S{i}</strong></td>
                         {row.map((val, j) => {
@@ -573,7 +777,8 @@ function App() {
                               style={{
                                 color: cellColor(val),
                                 background: isHl ? 'rgba(129, 140, 248, 0.15)' : 'transparent',
-                                cursor: 'crosshair'
+                                cursor: 'crosshair',
+                                transition: 'color 0.3s ease'
                               }}
                               onMouseEnter={() => setHoveredEdge(`${i}-${j}`)}
                               onMouseLeave={() => setHoveredEdge(null)}
@@ -613,11 +818,11 @@ function App() {
                     <thead>
                       <tr>
                         <th>State</th>
-                        {result.B[0].map((_, j) => <th key={j}>Sym {j}</th>)}
+                        {(result.history[currentIter]?.B || result.B)[0].map((_, j) => <th key={j}>Sym {j}</th>)}
                       </tr>
                     </thead>
                     <tbody>
-                      {result.B.map((row, i) => {
+                      {(result.history[currentIter]?.B || result.B).map((row, i) => {
                         const isRowHovered = hoveredNode === i;
                         return (
                           <motion.tr
@@ -628,7 +833,7 @@ function App() {
                           >
                             <td><strong>S{i}</strong></td>
                             {row.map((val, j) => (
-                              <td key={j} style={{ color: cellColor(val) }}>
+                              <td key={j} style={{ color: cellColor(val), transition: 'color 0.3s ease' }}>
                                 {val.toFixed(4)}
                               </td>
                             ))}
@@ -665,10 +870,10 @@ function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {result.Pi.map((val, i) => (
+                      {(result.history[currentIter]?.Pi || result.Pi).map((val, i) => (
                         <tr key={i}>
                           <td><strong>S{i}</strong></td>
-                          <td style={{ color: cellColor(val), fontWeight: 600 }}>
+                          <td style={{ color: cellColor(val), fontWeight: 600, transition: 'color 0.3s ease' }}>
                             {val.toFixed(4)}
                           </td>
                         </tr>

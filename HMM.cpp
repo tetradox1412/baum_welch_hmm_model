@@ -117,8 +117,15 @@ public:
         }
     }
 
-    // History of log-likelihoods for convergence analysis
-    vector<double> history;
+    struct IterationState {
+        double logL;
+        vector<double> A;
+        vector<double> B;
+        vector<double> Pi;
+    };
+
+    // History of parameters for iteration playback animation
+    vector<IterationState> history;
 
     // Modified train to track history
     void train(const vector<vector<int>>& observations, int maxIter) {
@@ -223,7 +230,9 @@ public:
 
             }
             
-            history.push_back(iterLogLikelihood);
+            // Push snapshot of parameters BEFORE they are updated in M-Step
+            // (or push after, depending on preference. Here we capture the state that PRODUCED this logL)
+            history.push_back({iterLogLikelihood, A, B, Pi});
 
             // M-Step: Update parameters
             for (int i = 0; i < N; i++) {
@@ -246,7 +255,34 @@ public:
         
         cout << "  \"history\": [" << endl;
         for(size_t i=0; i<history.size(); i++) {
-            cout << "    { \"iter\": " << i << ", \"logLikelihood\": " << history[i] << " }" << (i < history.size()-1 ? "," : "") << endl;
+            cout << "    {" << endl;
+            cout << "      \"iter\": " << i << "," << endl;
+            cout << "      \"logLikelihood\": " << fixed << setprecision(6) << history[i].logL << "," << endl;
+            
+            // Print A snapshot
+            cout << "      \"A\": [" << endl;
+            for (int r = 0; r < N; r++) {
+                cout << "        [";
+                for (int c = 0; c < N; c++) cout << fixed << setprecision(6) << history[i].A[r * N + c] << (c < N - 1 ? ", " : "");
+                cout << "]" << (r < N - 1 ? "," : "") << endl;
+            }
+            cout << "      ]," << endl;
+
+            // Print B snapshot
+            cout << "      \"B\": [" << endl;
+            for (int r = 0; r < N; r++) {
+                cout << "        [";
+                for (int c = 0; c < M; c++) cout << fixed << setprecision(6) << history[i].B[r * M + c] << (c < M - 1 ? ", " : "");
+                cout << "]" << (r < N - 1 ? "," : "") << endl;
+            }
+            cout << "      ]," << endl;
+
+            // Print Pi snapshot
+            cout << "      \"Pi\": [";
+            for (int r = 0; r < N; r++) cout << fixed << setprecision(6) << history[i].Pi[r] << (r < N - 1 ? ", " : "");
+            cout << "]" << endl;
+
+            cout << "    }" << (i < history.size()-1 ? "," : "") << endl;
         }
         cout << "  ]," << endl;
 
@@ -290,6 +326,10 @@ int main() {
     // 0 = random (default), 1 = custom
     int initMode = 0;
     cin >> initMode;
+
+    // Read max iterations
+    int maxIter = 50;
+    cin >> maxIter;
     
     vector<vector<int>> obs(K);
     for (int k = 0; k < K; k++) {
@@ -315,7 +355,7 @@ int main() {
     }
 
     clock_t start = clock();
-    hmm.train(obs, 50); 
+    hmm.train(obs, maxIter); 
     clock_t end = clock();
     double execTime = double(end - start) / CLOCKS_PER_SEC;
 

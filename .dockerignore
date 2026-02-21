@@ -1,0 +1,10 @@
+# Ignoring frontend and git folders to speed up Docker Build
+frontend/
+node_modules/
+dist/
+.git/
+.gitignore
+*.exe
+*.o
+__pycache__/
+.env
