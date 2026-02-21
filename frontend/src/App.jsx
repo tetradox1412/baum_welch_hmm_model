@@ -7,6 +7,9 @@ import './App.css'
 const OptimizationChart = lazy(() => import('./OptimizationChart'));
 const MathExplanation = lazy(() => import('./MathExplanation'));
 const InitPlayground = lazy(() => import('./InitPlayground'));
+const GenerativeSampling = lazy(() => import('./GenerativeSampling'));
+const SensitivityAnalysis = lazy(() => import('./SensitivityAnalysis'));
+const ViterbiDecoding = lazy(() => import('./ViterbiDecoding'));
 import LandingPage from './LandingPage';
 
 function App() {
@@ -587,7 +590,7 @@ function App() {
               onChange={e => setShowParticles(e.target.checked)}
               className="toggle-input"
             />
-            <div className="toggle-slider" style={{ backgroundColor: showParticles ? '#818cf8' : '' }}></div>
+            <div className="toggle-slider"></div>
             <span className="toggle-text">
               Animate Probability Flow <span className="toggle-subtext">(Visual)</span>
             </span>
@@ -883,6 +886,21 @@ function App() {
                 </div>
               </motion.div>
             </div>
+
+            {/* Generative Sampling Simulation */}
+            <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-500">Loading generator...</div>}>
+              <GenerativeSampling Pi={result.history[currentIter]?.Pi || result.Pi} A={result.history[currentIter]?.A || result.A} B={result.history[currentIter]?.B || result.B} isDark={true} />
+            </Suspense>
+
+            {/* Interactive What-If Sensitivity Topography */}
+            <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-500">Loading sensitivity analysis...</div>}>
+              <SensitivityAnalysis Pi={result.history[currentIter]?.Pi || result.Pi} A={result.history[currentIter]?.A || result.A} B={result.history[currentIter]?.B || result.B} originalLL={result.final_log_likelihood} observationsText={observations} isDark={true} />
+            </Suspense>
+
+            {/* Live Viterbi Decoding */}
+            <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-500">Loading Viterbi decoder...</div>}>
+              <ViterbiDecoding Pi={result.history[currentIter]?.Pi || result.Pi} A={result.history[currentIter]?.A || result.A} B={result.history[currentIter]?.B || result.B} isDark={true} />
+            </Suspense>
 
             {/* In-depth Math Explanation */}
             <Suspense fallback={<div className="h-64 flex items-center justify-center text-gray-500">Loading explanation...</div>}>
