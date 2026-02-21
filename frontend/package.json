@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
     "axios": "^1.13.5",
     "framer-motion": "^12.34.2",
     "katex": "^0.16.28",
@@ -21,6 +23,7 @@
     "recharts": "^3.7.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.1.0",
     "@eslint/js": "^9.39.1",
     "@tailwindcss/postcss": "^4.2.0",
     "@types/react": "^19.2.7",
